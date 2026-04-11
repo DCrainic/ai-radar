@@ -1,0 +1,31 @@
+# Environment & secrets
+.env
+
+# Database
+*.db
+*.sqlite
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Exports
+content_ideas.md
+digest_*.md
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code session files
+.claude/
