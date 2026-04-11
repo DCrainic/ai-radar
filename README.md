@@ -31,7 +31,7 @@ AI news breaks on Twitter first — from model releases to benchmark drops to vi
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_USERNAME/ai-radar.git
+git clone https://github.com/DCrainic/ai-radar.git
 cd ai-radar
 
 # 2. Install dependencies
