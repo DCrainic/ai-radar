@@ -236,20 +236,17 @@ st.markdown(
     h3 {{ font-size: 16px !important; font-weight: 700 !important; }}
 
     /* ── Streamlit-Chrome ausblenden ── */
-    #MainMenu                        {{ visibility: hidden; }}
-    footer                           {{ visibility: hidden; }}
-    /* Hide deploy button + toolbar content, but keep the header element
-       in the DOM so the sidebar collapse/reopen button stays functional */
-    [data-testid="stToolbar"]        {{ display: none !important; }}
-    .stDeployButton                  {{ display: none !important; }}
+    /* Keep header at its natural height so the sidebar toggle keeps working.
+       Make it transparent and hide only the content inside it. */
     header[data-testid="stHeader"] {{
         background: transparent !important;
         border-bottom: none !important;
         box-shadow: none !important;
-        height: 0px !important;
-        min-height: 0px !important;
-        overflow: visible !important;
     }}
+    [data-testid="stToolbar"]  {{ visibility: hidden !important; }}
+    .stDeployButton            {{ visibility: hidden !important; }}
+    #MainMenu                  {{ visibility: hidden !important; }}
+    footer                     {{ visibility: hidden; }}
     </style>
     """,
     unsafe_allow_html=True,
