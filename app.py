@@ -238,9 +238,8 @@ st.markdown(
     /* ── Streamlit-Chrome ausblenden ── */
     #MainMenu                        {{ visibility: hidden; }}
     footer                           {{ visibility: hidden; }}
-    header[data-testid="stHeader"]   {{ display: none !important; }}
-    [data-testid="stToolbar"]        {{ display: none !important; }}
     .stDeployButton                  {{ display: none !important; }}
+    /* Deliberately NOT hiding the header — it contains the sidebar reopen button */
     </style>
     """,
     unsafe_allow_html=True,
@@ -339,8 +338,8 @@ with st.sidebar:
         + [f"🔬 {a}" for a in RESEARCH_ACCOUNTS if a in account_liste]
     )
     account_filter_raw = st.selectbox("Account", tier_options)
-    # Strip the tier emoji prefix to get the raw handle
-    account_filter = account_filter_raw.lstrip("📹🔬 ")
+    # Strip the tier emoji prefix (format is "EMOJI handle" — split on first space)
+    account_filter = account_filter_raw.split(" ", 1)[-1] if " " in account_filter_raw else account_filter_raw
 
     st.markdown("---")
     st.markdown(
@@ -394,8 +393,8 @@ with tab_dashboard:
                 st.session_state.last_refresh = datetime.now(timezone.utc)
             st.rerun()
 
-    # Demo-Modus-Banner
-    if tracker.mock_mode:
+    # Demo-Modus-Banner — check env directly so it reflects the current state
+    if not os.getenv("TWITTER_BEARER_TOKEN"):
         st.markdown(
             "<div class='demo-banner'>⚠️ <strong>Demo-Modus</strong> — "
             "läuft mit realistischen Beispiel-Daten. Füge deinen Twitter Bearer Token "
@@ -675,19 +674,25 @@ with tab_einstellungen:
 
     if st.button("💾 API-Schlüssel speichern"):
         if new_token and not new_token.startswith("●"):
+            # 1. Persist to .env
             env_path = os.path.join(os.path.dirname(__file__), ".env")
-            lines: list[str] = []
+            existing: list[str] = []
             if os.path.exists(env_path):
                 with open(env_path) as f:
-                    lines = [l for l in f.readlines() if not l.startswith("TWITTER_BEARER_TOKEN")]
-            lines.append(f"TWITTER_BEARER_TOKEN={new_token}\n")
+                    existing = [l for l in f.readlines() if not l.startswith("TWITTER_BEARER_TOKEN")]
+            existing.append(f"TWITTER_BEARER_TOKEN={new_token}\n")
             with open(env_path, "w") as f:
-                f.writelines(lines)
-            st.success("API-Schlüssel in .env gespeichert — App neu starten, um Live-Modus zu aktivieren.")
+                f.writelines(existing)
+            # 2. Activate immediately in the running process
+            os.environ["TWITTER_BEARER_TOKEN"] = new_token
+            # 3. Clear cached tracker so it reinitialises with the new token
+            st.cache_resource.clear()
+            st.success("✅ API-Schlüssel gespeichert — Live-Modus wird aktiviert…")
+            st.rerun()
         else:
             st.warning("Bitte einen gültigen Token eingeben (nicht den maskierten Platzhalter).")
 
-    if current_token:
+    if os.getenv("TWITTER_BEARER_TOKEN"):
         st.markdown(
             "<span style='color:#16a34a;font-size:13px'>✅ Bearer Token erkannt — Live-Modus aktiv</span>",
             unsafe_allow_html=True,
