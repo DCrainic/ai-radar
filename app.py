@@ -238,8 +238,18 @@ st.markdown(
     /* ── Streamlit-Chrome ausblenden ── */
     #MainMenu                        {{ visibility: hidden; }}
     footer                           {{ visibility: hidden; }}
+    /* Hide deploy button + toolbar content, but keep the header element
+       in the DOM so the sidebar collapse/reopen button stays functional */
+    [data-testid="stToolbar"]        {{ display: none !important; }}
     .stDeployButton                  {{ display: none !important; }}
-    /* Deliberately NOT hiding the header — it contains the sidebar reopen button */
+    header[data-testid="stHeader"] {{
+        background: transparent !important;
+        border-bottom: none !important;
+        box-shadow: none !important;
+        height: 0px !important;
+        min-height: 0px !important;
+        overflow: visible !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True,
