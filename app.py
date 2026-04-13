@@ -236,17 +236,21 @@ st.markdown(
     h3 {{ font-size: 16px !important; font-weight: 700 !important; }}
 
     /* ── Streamlit-Chrome ausblenden ── */
-    /* Keep header at its natural height so the sidebar toggle keeps working.
-       Make it transparent and hide only the content inside it. */
+    /* stToolbar appears in BOTH the header and the sidebar — only scope
+       the hide rule inside header so the sidebar collapse button is untouched */
     header[data-testid="stHeader"] {{
         background: transparent !important;
         border-bottom: none !important;
         box-shadow: none !important;
     }}
-    [data-testid="stToolbar"]  {{ visibility: hidden !important; }}
-    .stDeployButton            {{ visibility: hidden !important; }}
-    #MainMenu                  {{ visibility: hidden !important; }}
-    footer                     {{ visibility: hidden; }}
+    header[data-testid="stHeader"] [data-testid="stToolbar"] {{
+        visibility: hidden !important;
+    }}
+    /* Deploy button (Streamlit 1.35+ testid + legacy class) */
+    [data-testid="stAppDeployButton"] {{ display: none !important; }}
+    .stDeployButton                   {{ display: none !important; }}
+    #MainMenu                         {{ visibility: hidden !important; }}
+    footer                            {{ visibility: hidden; }}
     </style>
     """,
     unsafe_allow_html=True,
