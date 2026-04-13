@@ -18,7 +18,7 @@ from categoriser import all_categories, get_meta
 from database import Database
 from digest import generate_digest
 from scheduler import start as start_scheduler
-from tracker import ACCOUNTS, TwitterTracker
+from tracker import ACCOUNTS, YOUTUBE_CREATORS, RESEARCH_ACCOUNTS, TwitterTracker
 
 load_dotenv()
 
@@ -86,6 +86,7 @@ st.markdown(
         letter-spacing: .4px;
         text-transform: uppercase;
     }}
+    .badge-youtube_signal    {{ background:#FEF2F2; color:#B91C1C; }}
     .badge-model_release     {{ background:#EFF6FF; color:#1D4ED8; }}
     .badge-tool_product      {{ background:#F0FDF4; color:#166534; }}
     .badge-research_paper    {{ background:#FEF9C3; color:#713F12; }}
@@ -118,6 +119,70 @@ st.markdown(
 
     /* ── Metriken ── */
     .metrics {{ font-size: 13px; color: #64748b; }}
+
+    /* ── YouTube-Signal-Karte ── */
+    .yt-signal-card {{
+        background: #fff5f5;
+        border: 1.5px solid #fca5a5;
+        border-radius: 12px;
+        padding: 16px 18px 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 4px rgba(185,28,28,.08);
+    }}
+    .yt-signal-card:hover {{ box-shadow: 0 4px 14px rgba(185,28,28,.15); }}
+
+    /* ── Adaptions-Karte ── */
+    .adaptation-card {{
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-top: 10px;
+        font-size: 13px;
+        line-height: 1.6;
+    }}
+    .adaptation-row {{
+        display: flex;
+        gap: 8px;
+        margin-bottom: 5px;
+    }}
+    .adaptation-label {{
+        font-weight: 700;
+        color: #15803d;
+        min-width: 130px;
+        flex-shrink: 0;
+    }}
+    .adaptation-value {{
+        color: #1e293b;
+    }}
+
+    /* ── Tier-Badge ── */
+    .tier-badge-1 {{
+        display: inline-block;
+        background: #FEF2F2;
+        color: #B91C1C;
+        border: 1px solid #fca5a5;
+        border-radius: 100px;
+        padding: 1px 8px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .5px;
+        text-transform: uppercase;
+        margin-right: 6px;
+    }}
+    .tier-badge-2 {{
+        display: inline-block;
+        background: #EFF6FF;
+        color: #1D4ED8;
+        border: 1px solid #93c5fd;
+        border-radius: 100px;
+        padding: 1px 8px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .5px;
+        text-transform: uppercase;
+        margin-right: 6px;
+    }}
 
     /* ── Ideen-Karte ── */
     .idea-card {{
@@ -266,7 +331,16 @@ with st.sidebar:
     min_eng = st.slider("Mindest-Engagement", min_value=0, max_value=5000, value=100, step=50)
 
     account_liste = db.get_setting("accounts", ACCOUNTS)
-    account_filter = st.selectbox("Account", ["Alle"] + account_liste)
+
+    # Build display list with tier labels
+    tier_options = (
+        ["Alle"]
+        + [f"📹 {a}" for a in YOUTUBE_CREATORS if a in account_liste]
+        + [f"🔬 {a}" for a in RESEARCH_ACCOUNTS if a in account_liste]
+    )
+    account_filter_raw = st.selectbox("Account", tier_options)
+    # Strip the tier emoji prefix to get the raw handle
+    account_filter = account_filter_raw.lstrip("📹🔬 ")
 
     st.markdown("---")
     st.markdown(
@@ -307,7 +381,9 @@ with tab_dashboard:
             "<div class='app-title'>📡 KI-Radar"
             "<span class='brand-tag'> · ONEFRAME</span></div>"
             "<p class='app-subtitle'>"
-            "KI-News auf X — bevor sie auf YouTube landen</p>",
+            "📹 <strong>Tier 1:</strong> AI-YouTuber-Signale &nbsp;|&nbsp; "
+            "🔬 <strong>Tier 2:</strong> Forschungs-Accounts &nbsp;—&nbsp; "
+            "KI-Trends erkennen, bevor sie auf YouTube landen</p>",
             unsafe_allow_html=True,
         )
     with hcol2:
@@ -338,16 +414,86 @@ with tab_dashboard:
         account=account_arg,
     )
 
+    # Aufteilen nach Tier
+    from tracker import YOUTUBE_CREATORS as _YT_CREATORS
+    yt_signals = [t for t in tweets if t.get("category") == "youtube_signal"]
+    other_tweets = [t for t in tweets if t.get("category") != "youtube_signal"]
+
+    # ── Tier 1: YouTube Früh-Signale ─────────────────────────────────────────
+    if yt_signals and (kat_key == "all" or kat_key == "youtube_signal"):
+        st.markdown(f"### 📹 YouTube Früh-Signale ({len(yt_signals)})")
+        st.caption("Diese Creator kündigen Themen zuerst auf X an — Frühwarnsignal, was bald auf YouTube landet.")
+
+        for tweet in yt_signals:
+            vor = _vor(tweet.get("posted_at", ""))
+            score = tweet.get("trend_score", 0)
+            text = tweet.get("text", "")
+            adaptation = tweet.get("adaptation", {})
+
+            # Signal Card
+            adapt_html = ""
+            if adaptation:
+                adapt_html = f"""
+                <div class="adaptation-card">
+                    <div style="font-weight:700;color:#15803d;margin-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.5px">🎬 Adaptionsvorschlag für deinen Kanal</div>
+                    <div class="adaptation-row"><span class="adaptation-label">🇺🇸 Original-Format</span><span class="adaptation-value">{adaptation.get('original_format','–')}</span></div>
+                    <div class="adaptation-row"><span class="adaptation-label">🇩🇪 Deutscher Titel</span><span class="adaptation-value">{adaptation.get('german_title','–')}</span></div>
+                    <div class="adaptation-row"><span class="adaptation-label">🎯 Zielgruppe</span><span class="adaptation-value">{adaptation.get('audience_fit','–')}</span></div>
+                    <div class="adaptation-row"><span class="adaptation-label">🪝 Hook-Idee</span><span class="adaptation-value"><em>{adaptation.get('hook','–')}</em></span></div>
+                    <div class="adaptation-row"><span class="adaptation-label">🖼️ Thumbnail</span><span class="adaptation-value">{adaptation.get('thumbnail','–')}</span></div>
+                    <div class="adaptation-row"><span class="adaptation-label">📋 Videostruktur</span><span class="adaptation-value">{adaptation.get('struktur','–')}</span></div>
+                </div>
+                """
+
+            st.markdown(
+                f"""
+                <div class="yt-signal-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span><span class="tier-badge-1">Tier 1 · YouTuber</span>
+                        <span class="badge badge-youtube_signal">📹 YouTube Signal</span></span>
+                        <span class="handle">{vor}</span>
+                    </div>
+                    <div class="author">@{tweet['author']}</div>
+                    <div class="tweet-text">{text}</div>
+                    <div class="metrics">
+                        ❤️ {_fmt_num(tweet.get('likes', 0))}&nbsp;&nbsp;
+                        🔁 {_fmt_num(tweet.get('retweets', 0))}&nbsp;&nbsp;
+                        💬 {_fmt_num(tweet.get('replies', 0))}&nbsp;&nbsp;&nbsp;
+                        <span class="score-pill">⚡ {score:.0f}</span>
+                    </div>
+                    {adapt_html}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            btn1, btn2 = st.columns(2)
+            with btn1:
+                st.link_button("🔗 Tweet ansehen", tweet.get("url", "#"), use_container_width=True)
+            with btn2:
+                gespeichert = db.is_idea(tweet["id"])
+                label = "✅ Gespeichert" if gespeichert else "🎬 Als Video-Idee"
+                if st.button(label, key=f"save_{tweet['id']}", use_container_width=True, disabled=gespeichert):
+                    db.save_idea(tweet["id"])
+                    st.rerun()
+
+            st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
+
+        st.markdown("---")
+
     # Zweispaltiges Layout: Tweets | Video-Ideen
     col_tweets, col_ideen = st.columns([2, 1], gap="large")
 
     with col_tweets:
-        st.markdown(f"### 🔥 Top Trends ({len(tweets)} Tweets)")
+        display_tweets = other_tweets if (kat_key == "all" or kat_key != "youtube_signal") else []
+        st.markdown(f"### 🔥 Top Trends — Forschung & Industrie ({len(display_tweets)} Tweets)")
 
-        if not tweets:
+        if not display_tweets and not yt_signals:
             st.info("Keine Tweets gefunden. Zeitraum erweitern oder Mindest-Engagement verringern.")
+        elif not display_tweets and kat_key != "youtube_signal":
+            st.caption("Alle Treffer sind YouTube-Signale (oben angezeigt).")
         else:
-            for tweet in tweets:
+            for tweet in display_tweets:
                 meta = get_meta(tweet["category"])
                 vor = _vor(tweet.get("posted_at", ""))
                 score = tweet.get("trend_score", 0)
@@ -357,7 +503,8 @@ with tab_dashboard:
                     f"""
                     <div class="tweet-card">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                            <span class="badge badge-{tweet['category']}">{meta['emoji']} {meta['label']}</span>
+                            <span><span class="tier-badge-2">Tier 2 · Research</span>
+                            <span class="badge badge-{tweet['category']}">{meta['emoji']} {meta['label']}</span></span>
                             <span class="handle">{vor}</span>
                         </div>
                         <div class="author">@{tweet['author']}</div>
@@ -481,12 +628,12 @@ with tab_digest:
     st.markdown("## 📋 Tages-Digest")
     st.markdown(
         "<p style='color:#64748b;font-size:14px'>"
-        "Automatisch generierte Zusammenfassung der Top-KI-Themen des Tages. "
+        "Tägliche Zusammenfassung: YouTube Früh-Signale mit Adaptionsvorschlag + Top-Trends. "
         "Direkt in Notion, Slack oder dein Morgen-Briefing kopieren.</p>",
         unsafe_allow_html=True,
     )
 
-    top_tweets = db.get_tweets(hours=24, limit=5)
+    top_tweets = db.get_tweets(hours=24, limit=20)
     digest_md = generate_digest(top_tweets, top_n=5)
 
     st.markdown("---")
@@ -556,17 +703,34 @@ with tab_einstellungen:
     # ── Account-Liste ─────────────────────────────────────────────────────────
 
     st.markdown("### 👤 Überwachte Accounts")
-    current_accounts = db.get_setting("accounts", ACCOUNTS)
-    accounts_text = st.text_area(
-        "Ein Handle pro Zeile (ohne @)",
-        value="\n".join(current_accounts),
-        height=240,
-        help="Diese Accounts werden in die Twitter-Suchanfrage einbezogen.",
-    )
+
+    ecol1, ecol2 = st.columns(2)
+    with ecol1:
+        st.markdown("**📹 Tier 1 — AI-YouTuber (Früh-Signale)**")
+        st.caption("Kündigen Themen auf X an, bevor Videos live gehen")
+        yt_text = st.text_area(
+            "YouTuber-Handles (ohne @)",
+            value="\n".join(db.get_setting("youtube_creators", YOUTUBE_CREATORS)),
+            height=160,
+            key="yt_accounts",
+        )
+    with ecol2:
+        st.markdown("**🔬 Tier 2 — Forschung & Industrie**")
+        st.caption("AI-Labore, Forscher und Industrie-Experten")
+        research_text = st.text_area(
+            "Forschungs-Handles (ohne @)",
+            value="\n".join(db.get_setting("research_accounts", RESEARCH_ACCOUNTS)),
+            height=160,
+            key="research_accounts",
+        )
+
     if st.button("💾 Accounts speichern"):
-        updated = [a.strip().lstrip("@") for a in accounts_text.splitlines() if a.strip()]
-        db.set_setting("accounts", updated)
-        st.success(f"{len(updated)} Accounts gespeichert.")
+        yt_updated = [a.strip().lstrip("@") for a in yt_text.splitlines() if a.strip()]
+        research_updated = [a.strip().lstrip("@") for a in research_text.splitlines() if a.strip()]
+        db.set_setting("youtube_creators", yt_updated)
+        db.set_setting("research_accounts", research_updated)
+        db.set_setting("accounts", yt_updated + research_updated)
+        st.success(f"✅ {len(yt_updated)} YouTuber + {len(research_updated)} Forschungs-Accounts gespeichert.")
 
     st.markdown("---")
 

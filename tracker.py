@@ -15,13 +15,21 @@ from mock_data import get_mock_tweets
 
 load_dotenv()
 
-# Accounts and keywords from the spec
-ACCOUNTS: list[str] = [
+# ── Tier 1: Führende AI-YouTuber (primäre Früh-Signale) ──────────────────────
+YOUTUBE_CREATORS: list[str] = [
+    "nateherk", "jackrobertsbiz", "gregisenberg", "TomSolidPM", "chaseai",
+]
+
+# ── Tier 2: AI-Forschungs- & Industrie-Accounts ───────────────────────────────
+RESEARCH_ACCOUNTS: list[str] = [
     "sama", "AnthropicAI", "OpenAI", "GoogleDeepMind", "ylecun",
     "karpathy", "emollick", "DrJimFan", "_akhaliq", "mistralai",
     "huggingface", "gdb", "fchollet", "rohanpaul_ai", "scaling01",
     "alexalbert__",
 ]
+
+# Combined list — YouTubers first (higher fetch priority)
+ACCOUNTS: list[str] = YOUTUBE_CREATORS + RESEARCH_ACCOUNTS
 
 KEYWORDS: list[str] = [
     "#AI", "#LLM", "#GenAI", "#AINews",
@@ -30,6 +38,10 @@ KEYWORDS: list[str] = [
     "Claude", "GPT", "Gemini", "Llama", "Mistral",
     "multimodal", "agents", "reasoning model",
     "AI agent", "fine-tuning", "RLHF",
+    # YouTuber signal keywords
+    "working on a video", "next video", "making a video",
+    "planning a video", "hot topic", "everyone is asking",
+    "you need to know about", "huge for creators",
 ]
 
 
@@ -128,6 +140,14 @@ class TwitterTracker:
     def _enrich(self, tweet: dict) -> dict:
         """Add category and trend_score to a raw tweet dict."""
         if not tweet.get("category"):
-            tweet["category"] = categorise(tweet["text"])
+            # Tweets from known YouTubers that hint at upcoming video content
+            if tweet.get("author", "").lower() in [a.lower() for a in YOUTUBE_CREATORS]:
+                from categoriser import is_youtube_signal
+                if is_youtube_signal(tweet["text"]):
+                    tweet["category"] = "youtube_signal"
+                else:
+                    tweet["category"] = categorise(tweet["text"])
+            else:
+                tweet["category"] = categorise(tweet["text"])
         tweet["trend_score"] = _trend_score(tweet)
         return tweet

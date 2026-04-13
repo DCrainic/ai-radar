@@ -5,6 +5,14 @@ Each tweet gets exactly one category label.
 
 from __future__ import annotations
 
+YOUTUBE_SIGNAL_KEYWORDS: list[str] = [
+    "working on a video", "next video", "making a video", "planning a video",
+    "filming", "big video", "hot topic right now", "everyone is asking",
+    "you need to see this", "huge for creators", "this is going to be",
+    "dropped a video", "just posted", "new video", "watch this", "link in bio",
+    "check out my", "on youtube", "my next", "the video is", "in the video",
+]
+
 CATEGORY_RULES: list[tuple[str, list[str]]] = [
     # Higher-priority rules first
     (
@@ -59,8 +67,9 @@ CATEGORY_RULES: list[tuple[str, list[str]]] = [
 ]
 
 CATEGORY_META: dict[str, dict] = {
-    "model_release":      {"emoji": "🚀", "label": "Modell-Release",      "color": "#1D4ED8", "bg": "#EFF6FF"},
-    "tool_product":       {"emoji": "🛠️", "label": "Neues Tool / Produkt","color": "#166534", "bg": "#F0FDF4"},
+    "youtube_signal":     {"emoji": "📹", "label": "YouTube Signal",       "color": "#B91C1C", "bg": "#FEF2F2"},
+    "model_release":      {"emoji": "🚀", "label": "Modell-Release",       "color": "#1D4ED8", "bg": "#EFF6FF"},
+    "tool_product":       {"emoji": "🛠️", "label": "Neues Tool / Produkt", "color": "#166534", "bg": "#F0FDF4"},
     "research_paper":     {"emoji": "📄", "label": "Forschungspapier",     "color": "#713F12", "bg": "#FEF9C3"},
     "funding_business":   {"emoji": "💰", "label": "Finanzierung / News",  "color": "#9A3412", "bg": "#FFF7ED"},
     "viral_debate":       {"emoji": "🔥", "label": "Virale Debatte",       "color": "#BE123C", "bg": "#FFF1F2"},
@@ -68,6 +77,12 @@ CATEGORY_META: dict[str, dict] = {
 }
 
 DEFAULT_CATEGORY = "viral_debate"
+
+
+def is_youtube_signal(text: str) -> bool:
+    """Return True if the tweet text looks like a YouTuber announcing upcoming content."""
+    lower = text.lower()
+    return any(kw in lower for kw in YOUTUBE_SIGNAL_KEYWORDS)
 
 
 def categorise(text: str) -> str:

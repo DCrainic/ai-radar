@@ -34,7 +34,8 @@ class Database:
                     url         TEXT,
                     category    TEXT,
                     trend_score REAL DEFAULT 0,
-                    fetched_at  TEXT
+                    fetched_at  TEXT,
+                    adaptation  TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS content_ideas (
@@ -53,20 +54,26 @@ class Database:
     def upsert_tweets(self, tweets: list[dict]):
         """Insert or replace a list of tweet dicts."""
         now = datetime.now(timezone.utc).isoformat()
+        rows = []
+        for t in tweets:
+            adaptation = t.get("adaptation")
+            rows.append({
+                **t,
+                "trend_score": t.get("trend_score", 0),
+                "fetched_at": now,
+                "adaptation": json.dumps(adaptation) if adaptation else None,
+            })
         with self._connect() as conn:
             conn.executemany(
                 """
                 INSERT OR REPLACE INTO tweets
                     (id, author, text, likes, retweets, replies,
-                     posted_at, url, category, trend_score, fetched_at)
+                     posted_at, url, category, trend_score, fetched_at, adaptation)
                 VALUES
                     (:id, :author, :text, :likes, :retweets, :replies,
-                     :posted_at, :url, :category, :trend_score, :fetched_at)
+                     :posted_at, :url, :category, :trend_score, :fetched_at, :adaptation)
                 """,
-                [
-                    {**t, "trend_score": t.get("trend_score", 0), "fetched_at": now}
-                    for t in tweets
-                ],
+                rows,
             )
 
     def get_tweets(
@@ -98,14 +105,23 @@ class Database:
 
         with self._connect() as conn:
             rows = conn.execute(query, params).fetchall()
-        return [dict(r) for r in rows]
+        return [self._deserialize_tweet(dict(r)) for r in rows]
 
     def get_tweet(self, tweet_id: str) -> dict | None:
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM tweets WHERE id = ?", (tweet_id,)
             ).fetchone()
-        return dict(row) if row else None
+        return self._deserialize_tweet(dict(row)) if row else None
+
+    def _deserialize_tweet(self, row: dict) -> dict:
+        """Deserialize JSON fields stored as text."""
+        if row.get("adaptation"):
+            try:
+                row["adaptation"] = json.loads(row["adaptation"])
+            except (json.JSONDecodeError, TypeError):
+                row["adaptation"] = None
+        return row
 
     def tweet_count(self) -> int:
         with self._connect() as conn:
@@ -164,7 +180,7 @@ class Database:
                 ORDER  BY ci.saved_at DESC
                 """
             ).fetchall()
-        return [dict(r) for r in rows]
+        return [self._deserialize_tweet(dict(r)) for r in rows]
 
     # ── Settings ──────────────────────────────────────────────────────────
 
