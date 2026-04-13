@@ -29,6 +29,7 @@ st.set_page_config(
     page_icon="📡",
     layout="wide",
     initial_sidebar_state="expanded",
+    menu_items={},
 )
 
 # ── Markenfarben ──────────────────────────────────────────────────────────────
@@ -41,7 +42,7 @@ st.markdown(
     f"""
     <style>
     /* ── Layout ── */
-    .block-container {{ padding-top: 1.2rem; padding-bottom: 2rem; }}
+    .block-container {{ padding-top: 3rem; padding-bottom: 2rem; }}
 
     /* ── ONEFRAME Sidebar-Header ── */
     .of-brand {{
@@ -236,21 +237,23 @@ st.markdown(
     h3 {{ font-size: 16px !important; font-weight: 700 !important; }}
 
     /* ── Streamlit-Chrome ausblenden ── */
-    /* stToolbar appears in BOTH the header and the sidebar — only scope
-       the hide rule inside header so the sidebar collapse button is untouched */
-    header[data-testid="stHeader"] {{
-        background: transparent !important;
-        border-bottom: none !important;
-        box-shadow: none !important;
-    }}
-    header[data-testid="stHeader"] [data-testid="stToolbar"] {{
-        visibility: hidden !important;
-    }}
-    /* Deploy button (Streamlit 1.35+ testid + legacy class) */
+    /* Only hide the deploy button — nothing else in the header.
+       The hamburger menu is already disabled via menu_items={{}} in set_page_config.
+       We never touch the sidebar toolbar or collapsed control so they stay visible. */
     [data-testid="stAppDeployButton"] {{ display: none !important; }}
     .stDeployButton                   {{ display: none !important; }}
-    #MainMenu                         {{ visibility: hidden !important; }}
     footer                            {{ visibility: hidden; }}
+
+    /* Defensive override: sidebar open/close controls must always be visible
+       regardless of any other rule that might accidentally catch them. */
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarContent"] button[kind="header"] {{
+        visibility: visible !important;
+        display: flex !important;
+        opacity: 1 !important;
+        pointer-events: all !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True,
